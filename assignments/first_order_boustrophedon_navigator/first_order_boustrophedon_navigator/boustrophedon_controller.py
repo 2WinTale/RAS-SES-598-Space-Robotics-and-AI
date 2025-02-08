@@ -19,11 +19,11 @@ class BoustrophedonController(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('Kp_linear', 2.8),
+                ('Kp_linear', 2.5),
                 ('Kd_linear', 0.05),
-                ('Kp_angular', 12.0),
-                ('Kd_angular', 0.008),
-                ('spacing', 1.4)
+                ('Kp_angular', 11.6),
+                ('Kd_angular', 0.01),
+                ('spacing', 1.5)
             ]
         )
         
@@ -63,6 +63,7 @@ class BoustrophedonController(Node):
             'cross_track_error', 
             10
         )
+        
         
         self.get_logger().info('Lawnmower controller started')
         self.get_logger().info(f'Following waypoints: {self.waypoints}')
