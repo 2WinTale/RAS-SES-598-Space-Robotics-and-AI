@@ -30,6 +30,44 @@
 - **Average cross-track error:** 0.039
 - **Maximum cross-track error:** 0.173
 
+
+
+
+-----------------------------------------------------------------------------------------------------------
+
+
+
+
+### OUTPUT PIC:(UPDATED)
+
+![Screenshot from 2025-02-08 04-25-59](https://github.com/user-attachments/assets/444b3150-d502-4a63-ae14-62b914e2969e)
+
+### EXPLANATION:
+
+#### **Kp_linear (Proportional Gain for Linear Velocity)**
+- **Reduced from:** 10.0 to 2.5.
+- **Impact:** The turtle moved smoother toward waypoints with reduced overshooting and oscillations. The slower approach made sure the travel became more stable but increased the time it took to reach each waypoint a little bit.
+
+#### **Kd_linear (Derivative Gain for Linear Velocity)**
+- **Reduced from:** 0.1 to 0.05.
+- **Impact:** It avoided excessive damping; therefore, it succeeded in maintaining a forward speed in motion without many oscillatory corrections.
+
+#### **Kp_angular (Proportional Gain for Angular Velocity)**
+- **Increased from:** 5.0 to 11.6.
+- **Effect:** The turtle became more responsive to angular deviations, which helped to reach the target orientation faster. Thus, cornering performance improved but with a bit higher risk of oscillations.
+
+#### **Kd_angular (Derivative Gain for Angular Velocity)**
+- **Reduced from:** 0.2 to 0.01.
+- **Effect:** The angular damping of the turtle was reduced, enabling faster corrections of the angle. This helped to increase responsiveness, but it was a delicate setting that required much tuning to prevent instability.
+
+#### **spacing (Distance Between Rows in the Lawn Mower Pattern)**
+- **Changed:** Increased from 1.0 to 1.5.
+- **Effect:** The turtle covered the area with fewer rows, completing the pattern faster. This made the coverage a little sparser, which was acceptable for this simulation.
+
+### **Received Error Margins:**
+- **Average cross-track error:** 0.029
+- **Maximum cross-track error:** 0.122
+
 ---
 
 ### **NOTE:**
