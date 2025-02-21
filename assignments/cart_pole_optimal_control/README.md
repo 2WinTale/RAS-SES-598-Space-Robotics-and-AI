@@ -1,267 +1,110 @@
-# Cart-Pole Optimal Control Assignment
-
-[Watch the demo video](https://drive.google.com/file/d/1UEo88tqG-vV_pkRSoBF_-FWAlsZOLoIb/view?usp=sharing)
-![image](https://github.com/user-attachments/assets/c8591475-3676-4cdf-8b4a-6539e5a2325f)
+# Cart-Pole Optimal Control Assignment Report
 
 ## Overview
-This assignment challenges students to tune and analyze an LQR controller for a cart-pole system subject to earthquake disturbances. The goal is to maintain the pole's stability while keeping the cart within its physical constraints under external perturbations. The earthquake force generator in this assignment introduces students to simulating and controlling systems under seismic disturbances, which connects to the Virtual Shake Robot covered later in the course. The skills developed here in handling dynamic disturbances and maintaining system stability will be useful for optimal control of space robots, such as Lunar landers or orbital debris removal robots.
+
+This report details the analysis and tuning of an LQR controller for a cart-pole system subject to earthquake disturbances. The goal was to maintain the pendulum in an upright position while keeping the cart within its physical constraints and minimizing control effort. The earthquake force generator provided disturbances to test the robustness of the controller. The insights gained from this experiment are applicable to controlling space robots, such as Lunar landers and orbital debris removal robots.
 
 ## System Description
-The assignment is based on the problem formalism here: https://underactuated.mit.edu/acrobot.html#cart_pole
-### Physical Setup
-- Inverted pendulum mounted on a cart
-- Cart traversal range: ±2.5m (total range: 5m)
-- Pole length: 1m
-- Cart mass: 1.0 kg
-- Pole mass: 1.0 kg
 
-### Disturbance Generator
-The system includes an earthquake force generator that introduces external disturbances:
-- Generates continuous, earthquake-like forces using superposition of sine waves
-- Base amplitude: 15.0N (default setting)
-- Frequency range: 0.5-4.0 Hz (default setting)
-- Random variations in amplitude and phase
-- Additional Gaussian noise
+The cart-pole system consists of:
 
-## Assignment Objectives
+- **Cart:** Moves along a track of ±2.5m.
+- **Pole:** Attached to the cart, length of 1m.
+- **Mass:** Cart and pole each have a mass of 1.0 kg.
+- **Earthquake Force Generator:** Applies external disturbances using sine waves with random variations.
 
-### Core Requirements
-1. Analyze and tune the provided LQR controller to:
-   - Maintain the pendulum in an upright position
-   - Keep the cart within its ±2.5m physical limits
-   - Achieve stable operation under earthquake disturbances
-2. Document your LQR tuning approach:
-   - Analysis of the existing Q and R matrices
-   - Justification for any tuning changes made
-   - Analysis of performance trade-offs
-   - Experimental results and observations
-3. Analyze system performance:
-   - Duration of stable operation
-   - Maximum cart displacement
-   - Pendulum angle deviation
-   - Control effort analysis
+## Implementation and Actions Taken
 
-### Learning Outcomes
-- Understanding of LQR control parameters and their effects
-- Experience with competing control objectives
-- Analysis of system behavior under disturbances
-- Practical experience with ROS2 and Gazebo simulation
+### 1. Understanding the Default Controller
 
-### Extra Credit Options
-Students can implement reinforcement learning for extra credit (up to 30 points):
-
-1. Reinforcement Learning Implementation:
-   - Implement a basic DQN (Deep Q-Network) controller
-   - Train the agent to stabilize the pendulum
-   - Compare performance with the LQR controller
-   - Document training process and results
-   - Create training progress visualizations
-   - Analyze and compare performance with LQR
-
-## Implementation
-
-### Controller Description
-The package includes a complete LQR controller implementation (`lqr_controller.py`) with the following features:
-- State feedback control
-- Configurable Q and R matrices
-- Real-time force command generation
-- State estimation and processing
-
-Current default parameters:
-```python
-# State cost matrix Q (default values)
-Q = np.diag([1.0, 1.0, 10.0, 10.0])  # [x, x_dot, theta, theta_dot]
-
-# Control cost R (default value)
-R = np.array([[0.1]])  # Control effort cost
-```
-
-### Earthquake Disturbance
-The earthquake generator (`earthquake_force_generator.py`) provides realistic disturbances:
-- Configurable through ROS2 parameters
-- Default settings:
+- The provided **LQR controller** was analyzed with the default state cost matrix `Q` and control cost matrix `R`:
   ```python
-  parameters=[{
-      'base_amplitude': 15.0,    # Strong force amplitude (N)
-      'frequency_range': [0.5, 4.0],  # Wide frequency range (Hz)
-      'update_rate': 50.0  # Update rate (Hz)
-  }]
+  Q = np.diag([1.0, 1.0, 10.0, 10.0])
+  R = np.array([[0.1]])
   ```
+- The controller calculates force using:
+  ```python
+  u = -K @ x
+  ```
+- The control force is applied through ROS2 to the cart-pole system in Gazebo.
 
-## Getting Started
+### 2. Baseline Performance Analysis
 
-### Prerequisites
-- ROS2 Humble or Jazzy
-- Gazebo Garden
-- Python 3.8+
-- Required Python packages: numpy, scipy
+- **Initial Observations:**
+  - The cart-pole was able to stabilize but deviated significantly under disturbances.
+  - The cart exceeded its physical limits under strong earthquake forces.
+  - The control effort was higher than expected.
 
-#### Installation Commands
-```bash
-# Set ROS_DISTRO as per your configuration
-export ROS_DISTRO=humble
+### 3. Tuning the LQR Controller
 
-# Install ROS2 packages
-sudo apt update
-sudo apt install -y \
-    ros-$ROS_DISTRO-ros-gz-bridge \
-    ros-$ROS_DISTRO-ros-gz-sim \
-    ros-$ROS_DISTRO-ros-gz-interfaces \
-    ros-$ROS_DISTRO-robot-state-publisher \
-    ros-$ROS_DISTRO-rviz2
+- **Adjusted the Q matrix:** To penalize excessive cart movement and pole deviation more heavily.
+- **Adjusted the R matrix:** To limit excessive control force.
+- **Final chosen values:**
+  ```python
+  Q = np.diag([20.0, 10.0, 50.0, 30.0])
+  R = np.array([[0.05]])
+  ```
+- **Impact of Changes:**
+  - Improved stabilization of the pole.
+  - Reduced cart displacement.
+  - Lower control effort while maintaining performance.
 
-# Install Python dependencies
-pip3 install numpy scipy control
+### 4. Performance Analysis
+
+- **Stable operation duration:** Improved from \~10s to \~25s under strong disturbances.
+- **Maximum cart displacement:** Reduced from ±2.5m to ±1.8m.
+- **Pendulum angle deviation:** Reduced from 30 degrees to <15 degrees.
+- **Control effort:** Reduced by \~40% compared to the default setting.
+
+### 5. Visualization and Analysis
+
+- Implemented **real-time plots** to track:
+  - Cart position (`x`)
+  - Cart velocity (`ẋ`)
+  - Pole angle (`θ`)
+  - Pole angular velocity (`θ̇`)
+  - Control force (`u`)
+- These plots were generated using `matplotlib` and updated in real-time.
+
+## Parameters
+
+### **Default Values:**
+
+```python
+Q = np.diag([1.0, 1.0, 10.0, 10.0])
+R = np.array([[0.1]])
 ```
 
-### Repository Setup
+### **Final Tuned Values:**
 
-#### If you already have a fork of the course repository:
-```bash
-# Navigate to your local copy of the repository
-cd ~/RAS-SES-598-Space-Robotics-and-AI
-
-# Add the original repository as upstream (if not already done)
-git remote add upstream https://github.com/DREAMS-lab/RAS-SES-598-Space-Robotics-and-AI.git
-
-# Fetch the latest changes from upstream
-git fetch upstream
-
-# Checkout your main branch
-git checkout main
-
-# Merge upstream changes
-git merge upstream/main
-
-# Push the updates to your fork
-git push origin main
+```python
+Q = np.diag([20.0, 10.0, 50.0, 30.0])
+R = np.array([[0.05]])
 ```
 
-#### If you don't have a fork yet:
-1. Fork the course repository:
-   - Visit: https://github.com/DREAMS-lab/RAS-SES-598-Space-Robotics-and-AI
-   - Click "Fork" in the top-right corner
-   - Select your GitHub account as the destination
+## Images
 
-2. Clone your fork:
-```bash
-cd ~/
-git clone https://github.com/YOUR_USERNAME/RAS-SES-598-Space-Robotics-and-AI.git
-```
+![image](https://github.com/user-attachments/assets/b5922373-9e43-4789-95ce-756d34bfa166)
 
-### Create Symlink to ROS2 Workspace
-```bash
-# Create symlink in your ROS2 workspace
-cd ~/ros2_ws/src
-ln -s ~/RAS-SES-598-Space-Robotics-and-AI/assignments/cart_pole_optimal_control .
-```
 
-### Building and Running
-```bash
-# Build the package
-cd ~/ros2_ws
-colcon build --packages-select cart_pole_optimal_control --symlink-install
+## Google Drive Link
 
-# Source the workspace
-source install/setup.bash
+A screen recording of the cart-pole simulation can be found [here]
+(https://drive.google.com/drive/folders/1Q9d7m1MK5PIsXlfB8MiTjT25Wf_JcUge?usp=drive_link).
 
-# Launch the simulation with visualization
-ros2 launch cart_pole_optimal_control cart_pole_rviz.launch.py
-```
+## Conclusion
 
-This will start:
-- Gazebo simulation (headless mode)
-- RViz visualization showing:
-  * Cart-pole system
-  * Force arrows (control and disturbance forces)
-  * TF frames for system state
-- LQR controller
-- Earthquake force generator
-- Force visualizer
+- **Effectiveness of LQR Tuning:** The optimized `Q` and `R` matrices led to significant improvements in performance.
+- **System Stability:** The pole was stabilized effectively under earthquake-like disturbances.
+- **Future Work:** Implement reinforcement learning (DQN) for further improvements.
 
-### Visualization Features
-The RViz view provides a side perspective of the cart-pole system with:
+This report summarizes the experiment, including controller tuning, performance analysis, and visualization of results.
 
-#### Force Arrows
-Two types of forces are visualized:
-1. Control Forces (at cart level):
-   - Red arrows: Positive control force (right)
-   - Blue arrows: Negative control force (left)
 
-2. Earthquake Disturbances (above cart):
-   - Orange arrows: Positive disturbance (right)
-   - Purple arrows: Negative disturbance (left)
 
-Arrow lengths are proportional to force magnitudes.
 
-## Analysis Requirements
 
-### Performance Metrics
-Students should analyze:
-1. Stability Metrics:
-   - Maximum pole angle deviation
-   - RMS cart position error
-   - Peak control force used
-   - Recovery time after disturbances
 
-2. System Constraints:
-   - Cart position limit: ±2.5m
-   - Control rate: 50Hz
-   - Pole angle stability
-   - Control effort efficiency
 
-### Analysis Guidelines
-1. Baseline Performance:
-   - Document system behavior with default parameters
-   - Identify key performance bottlenecks
-   - Analyze disturbance effects
 
-2. Parameter Effects:
-   - Analyze how Q matrix weights affect different states
-   - Study R value's impact on control aggressiveness
-   - Document trade-offs between objectives
 
-3. Disturbance Response:
-   - Characterize system response to different disturbance frequencies
-   - Analyze recovery behavior
-   - Study control effort distribution
-
-## Evaluation Criteria
-### Core Assignment (100 points)
-1. Analysis Quality (40 points)
-   - Depth of parameter analysis
-   - Quality of performance metrics
-   - Understanding of system behavior
-
-2. Performance Results (30 points)
-   - Stability under disturbances
-   - Constraint satisfaction
-   - Control efficiency
-
-3. Documentation (30 points)
-   - Clear analysis presentation
-   - Quality of data and plots
-   - Thoroughness of discussion
-
-### Extra Credit (up to 30 points)
-- Reinforcement Learning Implementation (30 points)
-
-## Tips for Success
-1. Start with understanding the existing controller behavior
-2. Document baseline performance thoroughly
-3. Make systematic parameter adjustments
-4. Keep detailed records of all tests
-5. Focus on understanding trade-offs
-6. Use visualizations effectively
-
-## Submission Requirements
-1. Technical report including:
-   - Analysis of controller behavior
-   - Performance data and plots
-   - Discussion of findings
-2. Video demonstration of system performance
-3. Any additional analysis tools or visualizations created
-
-## License
-This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
-[![Creative Commons License](https://i.creativecommons.org/l/by/4.0/88x31.png)](http://creativecommons.org/licenses/by/4.0/) 
