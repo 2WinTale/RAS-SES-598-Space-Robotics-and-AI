@@ -86,6 +86,11 @@ R = np.array([[0.05]])
 
 ![image](https://github.com/user-attachments/assets/b5922373-9e43-4789-95ce-756d34bfa166)
 
+Graph Image : 
+
+![Graphs](https://github.com/user-attachments/assets/0992f90b-cdc6-46fa-bd67-6f732d529971)
+
+
 
 ## Google Drive Link
 
