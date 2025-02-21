@@ -6,6 +6,9 @@ from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
 import numpy as np
 from scipy import linalg
+import matplotlib.pyplot as plt
+import signal
+import sys
 
 class CartPoleLQRController(Node):
     def __init__(self):
@@ -46,16 +49,18 @@ class CartPoleLQRController(Node):
         self.last_control = 0.0
         self.control_count = 0
         
+        # Data logging for performance graph
+        self.time_steps = []
+        self.state_log = []
+        self.control_log = []
+        self.time = 0.0
+        
         # Create publishers and subscribers
         self.cart_cmd_pub = self.create_publisher(
             Float64, 
             '/model/cart_pole/joint/cart_to_base/cmd_force', 
             10
         )
-        
-        # Verify publisher created successfully
-        if self.cart_cmd_pub:
-            self.get_logger().info('Force command publisher created successfully')
         
         self.joint_state_sub = self.create_subscription(
             JointState,
@@ -66,8 +71,10 @@ class CartPoleLQRController(Node):
         
         # Control loop timer
         self.timer = self.create_timer(0.01, self.control_loop)
-        
         self.get_logger().info('Cart-Pole LQR Controller initialized')
+        
+        # Handle shutdown signal
+        signal.signal(signal.SIGINT, self.handle_shutdown)
     
     def compute_lqr_gain(self):
         """Compute the LQR gain matrix K."""
@@ -78,39 +85,38 @@ class CartPoleLQRController(Node):
     def joint_state_callback(self, msg):
         """Update state estimate from joint states."""
         try:
-            # Get indices for cart and pole joints
-            cart_idx = msg.name.index('cart_to_base')  # Cart position/velocity
-            pole_idx = msg.name.index('pole_joint')    # Pole angle/velocity
+            cart_idx = msg.name.index('cart_to_base')
+            pole_idx = msg.name.index('pole_joint')
             
-            # State vector: [x, ẋ, θ, θ̇]
             self.x = np.array([
-                [msg.position[cart_idx]],     # Cart position (x)
-                [msg.velocity[cart_idx]],     # Cart velocity (ẋ)
-                [msg.position[pole_idx]],     # Pole angle (θ)
-                [msg.velocity[pole_idx]]      # Pole angular velocity (θ̇)
+                [msg.position[cart_idx]],
+                [msg.velocity[cart_idx]],
+                [msg.position[pole_idx]],
+                [msg.velocity[pole_idx]]
             ])
             
             if not self.state_initialized:
-                self.get_logger().info(f'Initial state: cart_pos={msg.position[cart_idx]:.3f}, cart_vel={msg.velocity[cart_idx]:.3f}, pole_angle={msg.position[pole_idx]:.3f}, pole_vel={msg.velocity[pole_idx]:.3f}')
+                self.get_logger().info(f'Initial state: {self.x.T}')
                 self.state_initialized = True
                 
         except (ValueError, IndexError) as e:
-            self.get_logger().warn(f'Failed to process joint states: {e}, msg={msg.name}')
+            self.get_logger().warn(f'Failed to process joint states: {e}')
     
     def control_loop(self):
         """Compute and apply LQR control."""
         try:
             if not self.state_initialized:
-                self.get_logger().warn('State not initialized yet')
                 return
 
             # Compute control input u = -Kx
             u = -self.K @ self.x
             force = float(u[0])
             
-            # Log control input periodically
-            if abs(force - self.last_control) > 0.1 or self.control_count % 100 == 0:
-                self.get_logger().info(f'State: {self.x.T}, Control force: {force:.3f}N')
+            # Log data for plotting
+            self.time_steps.append(self.time)
+            self.state_log.append(self.x.flatten())
+            self.control_log.append(force)
+            self.time += 0.01
             
             # Publish control command
             msg = Float64()
@@ -122,13 +128,54 @@ class CartPoleLQRController(Node):
             
         except Exception as e:
             self.get_logger().error(f'Control loop error: {e}')
+    
+    def plot_performance(self):
+        """Plot LQR performance graph and keep it open."""
+        if len(self.time_steps) == 0:
+            return
+        
+        self.state_log = np.array(self.state_log)
+        
+        plt.figure(figsize=(10, 6))
+        plt.subplot(2, 1, 1)
+        plt.plot(self.time_steps, self.state_log[:, 0], label='Cart Position (x)')
+        plt.plot(self.time_steps, self.state_log[:, 1], label='Cart Velocity (ẋ)')
+        plt.plot(self.time_steps, self.state_log[:, 2], label='Pole Angle (θ)')
+        plt.plot(self.time_steps, self.state_log[:, 3], label='Pole Angular Velocity (θ̇)')
+        plt.xlabel('Time (s)')
+        plt.ylabel('State Values')
+        plt.legend()
+        plt.title('LQR Performance - State Evolution')
+        
+        plt.subplot(2, 1, 2)
+        plt.plot(self.time_steps, self.control_log, label='Control Force (N)', color='r')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Force (N)')
+        plt.legend()
+        plt.title('LQR Control Force Over Time')
+        
+        plt.tight_layout()
+        plt.pause(0.1)  # Small pause for interactive mode
+        plt.show(block=True)  # Keeps the plot open until closed manually
+    
+    def handle_shutdown(self, signum, frame):
+        """Handle shutdown signal and generate plot."""
+        self.get_logger().info('Generating LQR performance graph...')
+        self.plot_performance()
+        sys.exit(0)
+
 
 def main(args=None):
     rclpy.init(args=args)
     controller = CartPoleLQRController()
-    rclpy.spin(controller)
-    controller.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(controller)
+    except KeyboardInterrupt:
+        controller.handle_shutdown(signal.SIGINT, None)
+    finally:
+        controller.destroy_node()
+        rclpy.shutdown()
+
 
 if __name__ == '__main__':
-    main() 
+    main()
