@@ -84,9 +84,28 @@ R = np.array([[0.05]])
 
 ## Images
 
+
+Image 1: 
+
+
+
 ![image](https://github.com/user-attachments/assets/b5922373-9e43-4789-95ce-756d34bfa166)
 
+
+
+Image 2:
+
+
+
+![Output](https://github.com/user-attachments/assets/0ee6edbd-81d0-4963-b074-21f57964c21c)
+
+
+
+
 Graph Image : 
+
+
+
 
 ![Graphs](https://github.com/user-attachments/assets/0992f90b-cdc6-46fa-bd67-6f732d529971)
 
